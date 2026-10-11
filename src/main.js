@@ -7,7 +7,6 @@ const stage = $('stage');
 const canvas = $('scene');
 $('arcade-link').hidden = window.self !== window.top;
 let reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let crtOn = true;
 const STORAGE = { best: 'retro-breaker-best', theme: 'retro-breaker-theme', audio: 'retro-breaker-audio' };
 
 const store = {
@@ -38,7 +37,7 @@ const disposables = new Set();
 const track = (thing) => { disposables.add(thing); return thing; };
 
 function mat(color, extra = {}) {
-  return track(new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.02, ...extra }));
+  return track(new THREE.MeshToonMaterial({ color, ...extra }));
 }
 function lineMat() { return track(new THREE.LineBasicMaterial({ color: C.ink, transparent: true, opacity: isDark() ? 0.55 : 0.85 })); }
 
@@ -156,42 +155,66 @@ function floorTexture() {
 // DeLorean: low-poly hovercar.
 function makeDeLorean() {
   const group = new THREE.Group();
-  const steel = mat(C.muted, { metalness: 0.6, roughness: 0.4 });
+  const steel = mat(C.muted);
   const dark = mat(C.ink);
   const glass = mat(C.bg, { transparent: true, opacity: 0.8 });
   const cyanGlow = mat(C.mint, { emissive: C.mint, emissiveIntensity: 2 });
   const redGlow = mat(C.coral, { emissive: C.coral, emissiveIntensity: 2 });
+  const grillMat = mat(C.ink);
+  
+  const chassis = new THREE.Mesh(geo.box, dark);
+  chassis.scale.set(1.5, 0.15, 2.8);
+  chassis.position.set(0, 0.15, 0);
+  group.add(chassis);
 
-  // Main body
+  const hood = new THREE.Mesh(geo.box, steel);
+  hood.scale.set(1.4, 0.2, 0.8);
+  hood.position.set(0, 0.325, -0.9);
+  hood.rotation.x = 0.15;
+  hood.castShadow = true;
+  group.add(hood);
+
   const body = new THREE.Mesh(geo.box, steel);
-  body.scale.set(1.4, 0.3, 2.6);
-  body.position.set(0, 0.3, 0);
+  body.scale.set(1.4, 0.25, 1.8);
+  body.position.set(0, 0.35, 0.4);
   body.castShadow = true;
   group.add(body);
 
-  // Cabin
   const cabin = new THREE.Mesh(geo.box, glass);
-  cabin.scale.set(1.0, 0.25, 1.2);
-  cabin.position.set(0, 0.55, -0.2);
+  cabin.scale.set(1.1, 0.35, 1.2);
+  cabin.position.set(0, 0.65, 0.1);
   cabin.castShadow = true;
   group.add(cabin);
+  
+  const roof = new THREE.Mesh(geo.box, steel);
+  roof.scale.set(1.1, 0.05, 0.9);
+  roof.position.set(0, 0.825, 0.15);
+  group.add(roof);
 
-  // Taillights
+  const louvers = new THREE.Mesh(geo.box, grillMat);
+  louvers.scale.set(1.0, 0.1, 0.8);
+  louvers.position.set(0, 0.55, 0.9);
+  louvers.rotation.x = -0.15;
+  group.add(louvers);
+
   const tail = new THREE.Mesh(geo.box, redGlow);
-  tail.scale.set(1.2, 0.1, 0.1);
+  tail.scale.set(1.3, 0.1, 0.05);
   tail.position.set(0, 0.35, 1.3);
   group.add(tail);
+  
+  const headLights = new THREE.Mesh(geo.box, glass);
+  headLights.scale.set(1.3, 0.1, 0.05);
+  headLights.position.set(0, 0.32, -1.25);
+  group.add(headLights);
 
-  // Hover wheels
-  const wheelGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16);
-  const thrusterGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.12, 12);
+  const wheelGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.15, 16);
+  const thrusterGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.12, 12);
   const positions = [
     [-0.8, 0.2, -0.9], [0.8, 0.2, -0.9],
     [-0.8, 0.2, 0.9], [0.8, 0.2, 0.9]
   ];
   positions.forEach(([x, y, z]) => {
     const w = new THREE.Mesh(wheelGeo, dark);
-    // Wheels flat (hover mode)
     w.rotation.x = Math.PI / 2;
     w.rotation.z = Math.PI / 2;
     w.position.set(x, y, z);
@@ -256,6 +279,7 @@ function buildWorld() {
   disposeAll();
   C = readPalette();
   scene.background = new THREE.Color(C.bg);
+  scene.fog = null;
   hemi.color.set(isDark() ? '#d9d0ee' : '#fffaf0');
   hemi.groundColor.set(isDark() ? '#2a2633' : '#c9c1b2');
   hemi.intensity = isDark() ? 1.55 : 1.9;
@@ -273,24 +297,85 @@ function buildWorld() {
   const base = outlinedBox(FIELD.width + 1.4, 0.5, FIELD.height + 2.2, mat(C['surface-soft']), board);
   base.position.set(0, -0.26, 0.4);
 
-  // Synthwave Sun / Skybox backdrop
-  const sunGeo = new THREE.CircleGeometry(8, 32);
-  const sunMat = track(new THREE.MeshBasicMaterial({ color: C['commit-4'], fog: false }));
-  const synthSun = new THREE.Mesh(sunGeo, sunMat);
-  synthSun.position.set(0, 2, -FIELD.height / 2 - 15);
-  // Cut lines in the sun for the retro aesthetic
-  for (let i = -6; i < 4; i += 1.5) {
-    const line = new THREE.Mesh(track(new THREE.PlaneGeometry(20, 0.3)), track(new THREE.MeshBasicMaterial({ color: C.bg })));
-    line.position.set(0, i - 1, 0.1);
-    synthSun.add(line);
+  
+  // Themed Background per level
+  const bgGroup = new THREE.Group();
+  bgGroup.position.set(0, 0, -FIELD.height / 2 - 10);
+  board.add(bgGroup);
+  
+  const levelIndex = game.info.index;
+  if (levelIndex === 0) { // Tron (1982)
+    const grid = new THREE.GridHelper(60, 20, C.mint, C.mint);
+    grid.material.transparent = true;
+    grid.material.opacity = 0.5;
+    bgGroup.add(grid);
+    const sphere = new THREE.Mesh(geo.sphere, track(new THREE.MeshBasicMaterial({ color: C.mint, wireframe: true })));
+    sphere.scale.set(6, 6, 6);
+    sphere.position.set(0, 6, -10);
+    bgGroup.add(sphere);
+  } else if (levelIndex === 1) { // Ghostbusters (1984)
+    scene.fog = new THREE.FogExp2(C.mint, 0.05); // Slime fog
+    for(let i=0; i<15; i++) {
+      const slime = new THREE.Mesh(geo.sphere, mat(C.mint, { transparent: true, opacity: 0.7 }));
+      slime.position.set((Math.random()-0.5)*40, Math.random()*10, -5 - Math.random()*10);
+      slime.scale.setScalar(Math.random()*2 + 1);
+      bgGroup.add(slime);
+    }
+  } else if (levelIndex === 2) { // BTTF (1985)
+    // Clock / Time dials
+    const clock = new THREE.Mesh(geo.cyl, mat(C.surface));
+    clock.rotation.x = Math.PI / 2;
+    clock.scale.set(8, 0.5, 8);
+    clock.position.set(0, 6, -5);
+    const hand = new THREE.Mesh(geo.box, mat(C.coral));
+    hand.scale.set(0.2, 4, 0.2);
+    hand.position.set(0, 6, -4.7);
+    bgGroup.add(clock, hand);
+  } else if (levelIndex === 3) { // Top Gun (1986)
+    // Sunset
+    const sunGeo = new THREE.CircleGeometry(10, 32);
+    const synthSun = new THREE.Mesh(sunGeo, track(new THREE.MeshBasicMaterial({ color: C.coral, fog: false })));
+    synthSun.position.set(0, 4, -15);
+    bgGroup.add(synthSun);
+  } else if (levelIndex === 4) { // RoboCop (1987)
+    // Industrial
+    for(let i=0; i<10; i++) {
+      const block = new THREE.Mesh(geo.box, mat(C.muted, { metalness: 0.8, roughness: 0.2 }));
+      block.scale.set(4, 10 + Math.random()*10, 4);
+      block.position.set((Math.random()-0.5)*40, block.scale.y/2, -10 - Math.random()*10);
+      bgGroup.add(block);
+    }
+  } else if (levelIndex === 5) { // Batman (1989)
+    // Moon
+    const moon = new THREE.Mesh(geo.sphere, mat(C.muted));
+    moon.scale.set(8, 8, 8);
+    moon.position.set(10, 10, -15);
+    bgGroup.add(moon);
+    scene.fog = new THREE.FogExp2(C.ink, 0.04);
+  } else if (levelIndex === 6) { // T2 (1991)
+    // Molten steel
+    const molten = new THREE.Mesh(track(new THREE.PlaneGeometry(60, 40)), track(new THREE.MeshBasicMaterial({ color: C.coral })));
+    molten.rotation.x = -Math.PI / 2;
+    molten.position.set(0, 0.1, -10);
+    bgGroup.add(molten);
+  } else if (levelIndex === 7) { // Jurassic (1993)
+    // Jungle (Green cones)
+    for(let i=0; i<20; i++) {
+      const tree = new THREE.Mesh(geo.cyl, mat(C.mint)); // Cone-ish if we had cone geo, use cyl for now
+      tree.scale.set(2, 6+Math.random()*6, 2);
+      tree.position.set((Math.random()-0.5)*50, tree.scale.y/2, -5 - Math.random()*20);
+      bgGroup.add(tree);
+    }
+  } else { // Matrix (1999)
+    // Green lines
+    for(let i=0; i<30; i++) {
+      const line = new THREE.Mesh(geo.box, mat(C.mint));
+      line.scale.set(0.2, Math.random()*10 + 5, 0.2);
+      line.position.set((Math.random()-0.5)*40, Math.random()*20, -5 - Math.random()*10);
+      bgGroup.add(line);
+    }
   }
-  board.add(synthSun);
 
-  const horizonGrid = new THREE.GridHelper(60, 20, C['border-strong'], C['border-strong']);
-  horizonGrid.position.set(0, 0, -FIELD.height / 2 - 10);
-  horizonGrid.material.transparent = true;
-  horizonGrid.material.opacity = 0.3;
-  board.add(horizonGrid);
 
   const rail = mat(C.lavender);
   const railH = 0.6;
@@ -732,14 +817,8 @@ $('theme').addEventListener('click', () => {
   dirtyWorld = true;
 });
 
-$('crt').addEventListener('click', () => {
-  crtOn = !crtOn;
-  $('crt').setAttribute('aria-pressed', String(crtOn));
-  $('crt').textContent = crtOn ? 'CRT on' : 'CRT off';
-  document.documentElement.classList.toggle('crt-mode', crtOn);
 });
 // Init CRT
-document.documentElement.classList.toggle('crt-mode', crtOn);
 
 $('motion').addEventListener('click', () => {
   reducedMotion = !reducedMotion;
