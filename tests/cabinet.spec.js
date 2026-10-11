@@ -18,6 +18,7 @@ const test = base.extend({
     await use(page);
     for (const request of failed) {
       const reason = request.failure()?.errorText;
+      if (request.url().includes('collector.github.com')) continue;
       if (request.isNavigationRequest() && request.frame().isDetached() && ['net::ERR_ABORTED', 'cancelled'].includes(reason)) continue;
       failures.push(`${reason} ${request.url()}`);
     }
