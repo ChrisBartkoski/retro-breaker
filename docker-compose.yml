@@ -1,0 +1,8 @@
+services:
+  retrobreaker:
+    build: .
+    container_name: retrobreaker
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+

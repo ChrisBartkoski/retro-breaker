@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Retro Breaker: an 80s Pop Culture & Audio Visualizer Game.">
+  <title>Retro Breaker</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="Retro Breaker">
+  <meta name="theme-color" content="#f7f4e9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#25232f" media="(prefers-color-scheme: dark)">
+  <script>
+    (() => {
+      let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      try {
+        const saved = localStorage.getItem('retro-breaker-theme');
+        if (saved === 'dark' || saved === 'light') theme = saved;
+      } catch { /* storage unavailable */ }
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./src/main.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Retro Breaker home">
+        <span>Chrono<span class="brand-sub">Breaker</span></span>
+      </a>
+      <div class="top-actions">
+        <button id="crt" class="chip" type="button" aria-pressed="true" title="Toggle CRT scanlines">CRT on</button>
+        <button id="motion" class="chip" type="button" aria-pressed="true" title="Toggle motion effects">Motion on</button>
+        <button id="theme" class="chip" type="button" aria-pressed="false" title="Toggle dark mode">Dark mode</button>
+        <button id="music" class="chip" type="button" aria-pressed="true" title="Toggle the original chiptune (M toggles all audio)">Music on</button>
+        <button id="sound" class="chip" type="button" aria-pressed="true" title="Toggle sound effects (M toggles all audio)">SFX on</button>
+        <button id="help" class="chip round" type="button" aria-label="How to play">?</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="heading">
+        <div>
+          <p class="eyebrow">88 MPH. TIME CIRCUITS ON.</p>
+          <h1>Chrono<span>Breaker</span><b class="edition">80s</b></h1>
+        </div>
+        <div class="controls-hint" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd><span>or mouse to move</span><kbd>Space</kbd><span>launch</span><kbd>P</kbd><span>pause</span></div>
+      </section>
+
+      <section class="game-shell" aria-label="Retro Breaker game">
+        <div class="game-toolbar">
+          <div class="repo">
+            <span class="branch-icon" aria-hidden="true">⏱</span>
+            <div><span class="label">DESTINATION YEAR</span><strong id="repo-name">1982</strong></div>
+            <span class="branch-tag" id="branch">Tron Era</span>
+          </div>
+          <div class="scoreboard">
+            <div><span class="label">SCORE</span><strong id="score">00000</strong></div>
+            <div><span class="label">BEST</span><strong id="best">00000</strong></div>
+            <div><span class="label">LEVEL</span><strong id="level">01</strong></div>
+            <div><span class="label">LIVES</span><strong id="lives" class="lives" aria-label="3 lives">♥♥♥</strong></div>
+          </div>
+        </div>
+
+        <div class="stage" id="stage" tabindex="0" data-status="loading"
+          aria-label="3D brick breaker. Move with the mouse, arrow keys or A and D, or drag on touch screens. Press Space or tap to launch. P pauses.">
+          <canvas id="scene" aria-hidden="true"></canvas>
+          <div class="stage-buttons">
+            <button id="new-game" type="button" title="New game: level 1, zero score, three lives" disabled>New game</button>
+            <button id="pause" type="button" title="Pause (P or Esc)" aria-label="Pause game" disabled>Ⅱ</button>
+          </div>
+          <div class="serve-hint" id="serve-hint" hidden>Press <kbd>Space</kbd>, click or tap to launch</div>
+          <div class="message" id="message">
+            <p class="eyebrow" id="message-kicker">TIME CIRCUITS ON</p>
+            <h2 id="message-title">Hit 88 MPH.</h2>
+            <p id="message-detail">Break equalizer bricks to build the track. Catch power-ups; dodge hazards.</p>
+            <button id="primary" class="primary" type="button" disabled>Start game <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+
+        <div class="effects" aria-label="Active power-ups">
+          <span class="effect" id="fx-copilot" data-type="copilot" data-active="false"><i aria-hidden="true"></i><span>Flux Surge <small>multi-ball</small></span><b>--</b></span>
+          <span class="effect" id="fx-dependabot" data-type="dependabot" data-active="false"><i aria-hidden="true"></i><span>Laser Grid <small>shield</small></span><b>--</b></span>
+          <span class="effect" id="fx-actions" data-type="actions" data-active="false"><i aria-hidden="true"></i><span>Proton Cannons <small>lasers</small></span><b>--</b></span>
+          <span class="effect" id="fx-regression" data-type="regression" data-active="false"><i aria-hidden="true"></i><span>Tape Jam <small>short paddle</small></span><b>--</b></span>
+        </div>
+
+        <div class="progress-row">
+          <div><span class="live-dot"></span><b id="remaining">0</b> bricks left to warp</div>
+          <div class="progress-track"><i id="progress-fill"></i></div>
+          <span id="percentage">0%</span>
+        </div>
+        <p class="sr-only" id="announcer" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="legend" aria-label="Legend">
+        <span class="legend-title">IN THIS ERA</span>
+        <span><i class="swatch c1"></i><i class="swatch c2"></i><i class="swatch c3"></i><i class="swatch c4"></i>EQ Bricks (darker = more hits)</span>
+        <span><i class="swatch conflict"></i>Static (unbreakable)</span>
+        <span><i class="swatch bug"></i>Temporal Hazard</span>
+        <span><i class="swatch copilot"></i>Flux Surge</span>
+        <span><i class="swatch dependabot"></i>Laser Grid</span>
+        <span><i class="swatch actions"></i>Proton Cannons</span>
+      </section>
+
+      <footer>
+        <span>A retro synthwave brick breaker.</span>
+        <a id="arcade-link" class="arcade-link" href="https://github.com/chrisbartkoski/retro-breaker" hidden>Source Code</a>
+        <span>88 MPH ACHIEVED.</span>
+      </footer>
+    </main>
+  </div>
+
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <button id="close-help" class="dialog-close" type="button" aria-label="Close instructions">×</button>
+    <p class="eyebrow">HOW TO PLAY</p>
+    <h2 id="help-title">Hit 88 MPH</h2>
+    <p>Steer the DeLorean. Bounce the ball into the equalizer bricks. Darker bricks need more hits. Break every EQ brick to warp to the next year. Static blocks are unbreakable and are not required.</p>
+    <div class="help-grid">
+      <div><h3>Keyboard</h3><p><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> move. <kbd>Space</kbd> launches. <kbd>P</kbd> or <kbd>Esc</kbd> pauses. <kbd>M</kbd> mutes all audio.</p></div>
+      <div><h3>Mouse and touch</h3><p>Move the mouse or drag across the board to steer. Click or tap to launch.</p></div>
+    </div>
+    <h3>Power-ups</h3>
+    <ul class="help-list">
+      <li><i class="swatch copilot"></i><b>Flux Surge</b>: two extra balls and 10 seconds of auto-aim.</li>
+      <li><i class="swatch dependabot"></i><b>Laser Grid</b>: a 15-second shield saves one dropped ball.</li>
+      <li><i class="swatch actions"></i><b>Proton Cannons</b>: 8 seconds of automatic lasers that break bricks.</li>
+      <li><i class="swatch bug"></i><b>Temporal Hazards</b> fall from hazard bricks. Catching one causes a Tape Jam that shortens the paddle for 8 seconds.</li>
+    </ul>
+    <p>You have three lives. Your best score is saved in this browser. The game pauses when it loses focus.</p>
+    <button id="got-it" class="primary" type="button">Got it <span aria-hidden="true">→</span></button>
+  </dialog>
+</body>
+</html>
