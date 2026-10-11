@@ -37,7 +37,8 @@ const disposables = new Set();
 const track = (thing) => { disposables.add(thing); return thing; };
 
 function mat(color, extra = {}) {
-  return track(new THREE.MeshToonMaterial({ color, ...extra }));
+  const { roughness, metalness, ...valid } = extra;
+  return track(new THREE.MeshToonMaterial({ color, ...valid }));
 }
 function lineMat() { return track(new THREE.LineBasicMaterial({ color: C.ink, transparent: true, opacity: isDark() ? 0.55 : 0.85 })); }
 
@@ -760,7 +761,20 @@ function jumpToLevel(lvl) {
 }
 
 // Dev modal controls setup
-$('dev-btn').addEventListener('click', toggleDevDialog);
+
+function setupDevButton() {
+  const btn = $('dev-btn');
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = 'true';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDevDialog();
+    });
+  }
+}
+setupDevButton();
+
 $('close-dev').addEventListener('click', closeDevDialog);
 $('dev-god-mode').addEventListener('click', () => {
   godMode = !godMode;
@@ -888,7 +902,7 @@ const KEY_DIR = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right' };
 document.addEventListener('keydown', (e) => {
   if (e.target.closest('a[href]') || e.ctrlKey || e.metaKey || e.altKey) return;
   // D toggles Developer Mode
-  if ((e.code === 'KeyD' || e.key === 'd' || e.key === 'D') && !e.repeat) {
+  if ((e.code === 'KeyD' || e.key === 'd' || e.key === 'D' || e.key === '`' || e.key === '~' || e.key === '\\') && !e.repeat) {
     e.preventDefault();
     toggleDevDialog();
     return;
@@ -898,7 +912,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if ($('help-dialog').open || !game) return;
-  const dir = KEY_DIR[e.code] ?? ({ a: 'left', A: 'left', d: 'right', D: 'right' })[e.key];
+  const dir = KEY_DIR[e.code] ?? ({ a: 'left', A: 'left' })[e.key];
   if (dir) { e.preventDefault(); held.add(dir); updateAxis(); return; }
   if (e.code === 'ArrowUp' || e.code === 'ArrowDown') { e.preventDefault(); return; }
   if (e.code === 'Space' || e.key === ' ') {
@@ -913,7 +927,7 @@ document.addEventListener('keydown', (e) => {
 // Buttons activate on Space keyup; keep Space for the game even when a button has focus.
 document.addEventListener('keyup', (e) => {
   if (e.code === 'Space' && !$('help-dialog').open && !e.target.closest('a[href]')) e.preventDefault();
-  const dir = KEY_DIR[e.code] ?? ({ a: 'left', A: 'left', d: 'right', D: 'right' })[e.key];
+  const dir = KEY_DIR[e.code] ?? ({ a: 'left', A: 'left' })[e.key];
   if (dir) { held.delete(dir); updateAxis(); }
 });
 window.addEventListener('blur', () => { held.clear(); if (game) { updateAxis(); autoPause(); } });
@@ -1118,6 +1132,7 @@ function frame(now) {
 }
 
 function init() {
+  setupDevButton();
   syncThemeButton();
   syncAudioButtons();
   $('best').textContent = pad(best);

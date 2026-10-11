@@ -201,8 +201,8 @@ html[data-era="1984"] {
   --bg: #070c14; --bg-dot: #0e1726; --surface: #0f1c29; --surface-soft: #172a3e;
   --border-strong: #ff9e00; --lavender: #00d2ff; --lavender-edge: #0099cc; --lavender-deep: #005580;
   --mint: #39ff14; --coral: #ff3b30;
-  --commit-1: #4a154b; --commit-2: #b5179e; --commit-3: #ff9e00; --commit-4: #39ff14;
-  --floor: #060a12; --floor-dot: #111a28; --ball: #ffffff;
+  --commit-1: #4a154b; --commit-2: #8338ec; --commit-3: #ff9e00; --commit-4: #00d2ff;
+  --floor: #070c14; --floor-dot: #121c2c; --ball: #ffffff;
 }
 html[data-era="1985"] {
   --bg: #140d2b; --bg-dot: #25184f; --surface: #1e1338; --surface-soft: #301f57;
