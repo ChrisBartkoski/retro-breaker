@@ -198,11 +198,11 @@ html[data-era="1982"] {
   --floor: #00050a; --floor-dot: #001226; --ball: #ffffff;
 }
 html[data-era="1984"] {
-  --bg: #050a0f; --bg-dot: #0b141f; --surface: #0f1c29; --surface-soft: #1a2f42;
-  --border-strong: #39ff14; --lavender: #ff00ff; --lavender-edge: #b5179e; --lavender-deep: #7209b7;
-  --mint: #39ff14; --coral: #ff9e00;
-  --commit-1: #7209b7; --commit-2: #b5179e; --commit-3: #ff00ff; --commit-4: #39ff14;
-  --floor: #020508; --floor-dot: #0b141f; --ball: #39ff14;
+  --bg: #070c14; --bg-dot: #0e1726; --surface: #0f1c29; --surface-soft: #172a3e;
+  --border-strong: #ff9e00; --lavender: #00d2ff; --lavender-edge: #0099cc; --lavender-deep: #005580;
+  --mint: #39ff14; --coral: #ff3b30;
+  --commit-1: #4a154b; --commit-2: #b5179e; --commit-3: #ff9e00; --commit-4: #39ff14;
+  --floor: #060a12; --floor-dot: #111a28; --ball: #ffffff;
 }
 html[data-era="1985"] {
   --bg: #140d2b; --bg-dot: #25184f; --surface: #1e1338; --surface-soft: #301f57;
@@ -255,3 +255,13 @@ html[data-era="1999"] {
 }
 
 
+
+/* Developer Mode Dialog */
+.dev-quick-actions, .dev-power-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+.dev-level-grid { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 16px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
+.dev-level-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface-soft); }
+.dev-level-info { display: flex; flex-direction: column; gap: 2px; }
+.dev-level-title { font-weight: 700; font-size: 13px; color: var(--ink); }
+.dev-level-sub { font-size: 11px; color: var(--muted); }
+.dev-level-btns { display: flex; gap: 6px; }
+.dev-level-btns button { padding: 5px 10px; font-size: 11px; font-weight: 650; }

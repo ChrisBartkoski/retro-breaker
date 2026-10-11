@@ -110,9 +110,9 @@ for (const launch of ['mouse', 'keyboard']) {
     await expect.poll(async () => Number(await stageData(frame, 'paddle-x'))).toBeLessThan(x - 1);
     await page.keyboard.up('ArrowLeft');
     const left = Number(await stageData(frame, 'paddle-x'));
-    await page.keyboard.down('d');
+    await page.keyboard.down('ArrowRight');
     await expect.poll(async () => Number(await stageData(frame, 'paddle-x'))).toBeGreaterThan(left + 1);
-    await page.keyboard.up('d');
+    await page.keyboard.up('ArrowRight');
 
     for (const key of ['p', 'Escape']) {
       await page.keyboard.press(key);
@@ -244,4 +244,27 @@ test('reduced motion still plays', async ({ page, isMobile }) => {
   await card(page).click();
   const frame = await readyGame(page);
   await launchWithSpace(page, frame);
+});
+
+test('developer mode: pressing D or clicking Dev opens dialog and warps level', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Dev mode keyboard coverage runs on desktop.');
+  await page.goto(candidate);
+  await expect.poll(() => stageData(page, 'status'), { timeout: 30_000 }).toBe('ready');
+  await page.locator('#primary').click();
+  await expect.poll(() => stageData(page, 'status')).toBe('serving');
+  
+  // Press D to open developer menu
+  await page.keyboard.press('d');
+  await expect(page.locator('#dev-dialog')).toBeVisible();
+  
+  // Verify all 9 levels rendered
+  const rows = page.locator('#dev-level-grid .dev-level-row');
+  await expect(rows).toHaveCount(9);
+  
+  // Warp to level 2 (Ghostbusters 1984)
+  const warpBtn = rows.nth(1).locator('[data-warp]');
+  await warpBtn.click();
+  await expect(page.locator('#dev-dialog')).toBeHidden();
+  await expect.poll(() => stageData(page, 'level')).toBe('2');
+  await expect(page.locator('html')).toHaveAttribute('data-era', '1984');
 });

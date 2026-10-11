@@ -124,3 +124,13 @@ Because the game uses the browser's native **Web Audio API** (zero external MP3/
 - **Mobile Gyroscope Controls**: Hook into the Device Orientation API so players can physically tilt their phones to steer the DeLorean.
 - **Procedural Era-Specific Music**: Build a procedural generator that mutates drum patterns and wave forms to match the era (e.g., 8-bit square waves in 1982, soaring 80s synth rock in 1986).
 - **Local Co-Op (Player 2)**: Player 2 joins on the keyboard (e.g., controlling a Hoverboard) to help catch falling balls, featuring unique cooperative power-ups.
+
+---
+
+## 8. Phase 7: User Profiles, Accounts, Statistics & PostgreSQL Database Integration
+Targeting deployment on `bartkoski.com`:
+- [ ] Implement PostgreSQL schema for `users`, `user_profiles`, `user_settings`, `user_statistics`, `game_sessions`, and `leaderboards`.
+- [ ] Create containerized REST API (`/api/v1/auth`, `/api/v1/profile`, `/api/v1/settings`, `/api/v1/games`).
+- [ ] Add client-side account login/registration modals and profile drawer.
+- [ ] Implement offline-first telemetry syncing: preserve local guest scores and sync with cloud on authentication.
+- [ ] Add global and era-specific leaderboards.

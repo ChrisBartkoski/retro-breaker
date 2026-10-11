@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { Game, FIELD, PADDLE, BALL, SHIELD_Y, POWERS, REGRESSION_SECONDS } from './engine.js';
+import { Game, FIELD, PADDLE, BALL, SHIELD_Y, POWERS, REGRESSION_SECONDS, LEVELS } from './engine.js';
 import { Chiptune } from './music.js';
 
 const $ = (id) => document.getElementById(id);
@@ -314,13 +314,28 @@ function buildWorld() {
     sphere.position.set(0, 6, -10);
     bgGroup.add(sphere);
   } else if (levelIndex === 1) { // Ghostbusters (1984)
-    scene.fog = new THREE.FogExp2(C.mint, 0.05); // Slime fog
-    for(let i=0; i<15; i++) {
-      const slime = new THREE.Mesh(geo.sphere, mat(C.mint, { transparent: true, opacity: 0.7 }));
-      slime.position.set((Math.random()-0.5)*40, Math.random()*10, -5 - Math.random()*10);
-      slime.scale.setScalar(Math.random()*2 + 1);
-      bgGroup.add(slime);
+    // No scene.fog - keep board crisp! NYC skyline + proton streams + Slimer orb
+    for (let i = -6; i <= 6; i++) {
+      const h = 5 + Math.abs(Math.sin(i * 1.5)) * 9;
+      const building = new THREE.Mesh(geo.box, mat('#0d1826'));
+      building.scale.set(3, h, 2);
+      building.position.set(i * 3.6, h / 2 - 2, -18);
+      bgGroup.add(building);
+      for (let wy = 2; wy < h - 2; wy += 2.2) {
+        const win = new THREE.Mesh(geo.box, track(new THREE.MeshBasicMaterial({ color: '#ffea00' })));
+        win.scale.set(0.35, 0.35, 0.1);
+        win.position.set(i * 3.6, wy - 2, -16.9);
+        bgGroup.add(win);
+      }
     }
+    // Twin proton beam curves (Orange and Cyan) crossing into the sky
+    tube(bgGroup, [[-12, 0, -10], [-5, 6, -14], [0, 9, -16], [5, 12, -18]], 0.16, track(new THREE.MeshBasicMaterial({ color: '#ff5500' })));
+    tube(bgGroup, [[-10, 0, -10], [-3, 7, -13], [1, 9, -15], [5, 12, -18]], 0.16, track(new THREE.MeshBasicMaterial({ color: '#00e5ff' })));
+    // Floating green Slimer orb
+    const slimer = new THREE.Mesh(geo.sphere, mat(C.mint, { transparent: true, opacity: 0.85 }));
+    slimer.scale.set(2.4, 2.4, 2.4);
+    slimer.position.set(0, 11, -16);
+    bgGroup.add(slimer);
   } else if (levelIndex === 2) { // BTTF (1985)
     // Clock / Time dials
     const clock = new THREE.Mesh(geo.cyl, mat(C.surface));
@@ -351,7 +366,7 @@ function buildWorld() {
     moon.scale.set(8, 8, 8);
     moon.position.set(10, 10, -15);
     bgGroup.add(moon);
-    scene.fog = new THREE.FogExp2(C.ink, 0.04);
+    // No fog
   } else if (levelIndex === 6) { // T2 (1991)
     // Molten steel
     const molten = new THREE.Mesh(track(new THREE.PlaneGeometry(60, 40)), track(new THREE.MeshBasicMaterial({ color: C.coral })));
@@ -525,7 +540,11 @@ function onEvent(type, data = {}) {
       break;
     case 'bug-patched': case 'bug-zapped': sfx.tone(900, 0.06, 'triangle', 0.07, 1300); break;
     case 'drop': sfx.tone(300, 0.2, 'triangle', 0.07, 120); break;
-    case 'life': if (!reducedMotion) shake = 0.35; if (data.lives > 0) announce(`Ball lost. ${data.lives} ${data.lives === 1 ? 'life' : 'lives'} left.`); break;
+    case 'life': 
+      if (godMode && game) { game.lives = 3; }
+      if (!reducedMotion) shake = 0.35; 
+      if (data.lives > 0) announce(`Ball lost. ${data.lives} ${data.lives === 1 ? 'life' : 'lives'} left.`); 
+      break;
     case 'cleared':
       sfx.arpeggio([523, 659, 784, 1047], 0.09);
       saveBest();
@@ -676,27 +695,156 @@ function autoPause() {
   if (['serving', 'playing', 'cleared'].includes(game?.status)) togglePause();
 }
 
+// ---------- Developer Mode ----------
+let godMode = false;
+
+function openDevDialog() {
+  if (game?.status === 'playing') togglePause();
+  renderDevLevels();
+  $('dev-dialog').showModal();
+}
+
+function closeDevDialog() {
+  $('dev-dialog').close();
+  focusStage();
+}
+
+function toggleDevDialog() {
+  if ($('dev-dialog').open) closeDevDialog();
+  else openDevDialog();
+}
+
+function renderDevLevels() {
+  const container = $('dev-level-grid');
+  if (!container || container.children.length > 0) return;
+  LEVELS.forEach((lvl, idx) => {
+    const levelNum = idx + 1;
+    const row = document.createElement('div');
+    row.className = 'dev-level-row';
+    row.innerHTML = `
+      <div class="dev-level-info">
+        <span class="dev-level-title">Level ${levelNum}: ${lvl.repo}</span>
+        <span class="dev-level-sub">${lvl.branch} • "${lvl.pr}"</span>
+      </div>
+      <div class="dev-level-btns">
+        <button class="chip" type="button" data-warp="${levelNum}">Warp</button>
+        <button class="chip" type="button" data-music="${levelNum}">♫ Play</button>
+      </div>
+    `;
+    row.querySelector('[data-warp]').addEventListener('click', () => {
+      jumpToLevel(levelNum);
+      closeDevDialog();
+    });
+    row.querySelector('[data-music]').addEventListener('click', () => {
+      activateAudio();
+      music?.setLevel(levelNum);
+      music?.setPlaying(true);
+    });
+    container.appendChild(row);
+  });
+}
+
+function jumpToLevel(lvl) {
+  activateAudio();
+  saveBest();
+  game.seed = crypto.getRandomValues(new Uint32Array(1))[0];
+  game.newGame(lvl);
+  game.start();
+  dirtyWorld = true;
+  document.documentElement.dataset.era = game.info.repo;
+  hideMessage();
+  music?.setLevel(lvl);
+  music?.setPlaying(true);
+  focusStage();
+  announce(`Warped to Level ${lvl}: ${game.info.repo}`);
+}
+
+// Dev modal controls setup
+$('dev-btn').addEventListener('click', toggleDevDialog);
+$('close-dev').addEventListener('click', closeDevDialog);
+$('dev-god-mode').addEventListener('click', () => {
+  godMode = !godMode;
+  $('dev-god-mode').textContent = `God Mode: ${godMode ? 'ON' : 'Off'}`;
+  $('dev-god-mode').style.background = godMode ? 'var(--mint)' : 'var(--surface)';
+  announce(godMode ? 'God Mode enabled (Infinite lives).' : 'God Mode disabled.');
+});
+$('dev-instant-win').addEventListener('click', () => {
+  if (!game) return;
+  activateAudio();
+  for (const b of game.bricks) {
+    if (b.kind !== 'conflict') b.alive = false;
+  }
+  closeDevDialog();
+  announce('88 MPH achieved! Warping to next year.');
+});
+$('dev-stop-music').addEventListener('click', () => {
+  music?.setPlaying(false);
+});
+$('dev-test-sfx').addEventListener('click', () => {
+  activateAudio();
+  sfx.tone(440, 0.1, 'square', 0.08);
+  setTimeout(() => sfx.tone(880, 0.15, 'sawtooth', 0.08), 200);
+  setTimeout(() => sfx.arpeggio([523, 659, 784, 1047], 0.08), 450);
+});
+$('dev-spawn-flux').addEventListener('click', () => {
+  if (game) { game.applyPower('copilot'); closeDevDialog(); }
+});
+$('dev-spawn-laser').addEventListener('click', () => {
+  if (game) { game.applyPower('dependabot'); closeDevDialog(); }
+});
+$('dev-spawn-cannons').addEventListener('click', () => {
+  if (game) { game.applyPower('actions'); closeDevDialog(); }
+});
+
+
 // ---------- audio ----------
 let audio = null, music = null, sfxGain = null;
-function activateAudio() {
+let audioUnlocked = false;
+
+function unlockAudioIOS() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
   if (!audio) {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
     audio = new Ctx();
     sfxGain = audio.createGain();
     sfxGain.gain.value = 0.9;
     sfxGain.connect(audio.destination);
     music = new Chiptune(audio);
     music.setEnabled(audioPrefs.music);
-    music.setLevel(game.level);
-    audio.addEventListener('statechange', () => music.sync());
+    music.setLevel(game?.level || 1);
+    audio.addEventListener('statechange', () => music?.sync());
   }
-  if (audio.state === 'suspended') audio.resume().catch(() => {});
-  music.setPlaying(['serving', 'playing', 'cleared'].includes(game.status));
+  if (audio.state === 'suspended') {
+    audio.resume().then(() => {
+      audioUnlocked = true;
+      music?.sync();
+    }).catch(() => {});
+  } else if (audio.state === 'running') {
+    audioUnlocked = true;
+  }
+  // iOS Safari hardware pipeline wake-up: play 1-sample silent buffer
+  try {
+    const buffer = audio.createBuffer(1, 1, 22050);
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audio.destination);
+    source.start(0);
+  } catch (e) {}
+}
+
+// Global unlock triggers for iOS Safari and mobile browsers
+['touchstart', 'touchend', 'click', 'keydown', 'pointerdown'].forEach((evt) => {
+  window.addEventListener(evt, () => unlockAudioIOS(), { passive: true });
+});
+
+function activateAudio() {
+  unlockAudioIOS();
+  music?.setPlaying(['serving', 'playing', 'cleared'].includes(game?.status));
 }
 const sfx = {
   tone(freq, length, type = 'square', level = 0.06, slideTo = null) {
-    if (!audio || !audioPrefs.sfx || audio.state !== 'running') return;
+    if (!audio || !audioPrefs.sfx) return;
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
     const t = audio.currentTime;
     const osc = audio.createOscillator();
     const gain = audio.createGain();
@@ -736,9 +884,20 @@ function updateAxis() {
   game.input.axis = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0);
   if (game.input.axis) game.input.targetX = null;
 }
-const KEY_DIR = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
+const KEY_DIR = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right' };
 document.addEventListener('keydown', (e) => {
-  if ($('help-dialog').open || e.target.closest('a[href]') || e.ctrlKey || e.metaKey || e.altKey || !game) return;
+  if (e.target.closest('a[href]') || e.ctrlKey || e.metaKey || e.altKey) return;
+  // D toggles Developer Mode
+  if ((e.code === 'KeyD' || e.key === 'd' || e.key === 'D') && !e.repeat) {
+    e.preventDefault();
+    toggleDevDialog();
+    return;
+  }
+  if ($('dev-dialog')?.open) {
+    if (e.code === 'Escape') { e.preventDefault(); closeDevDialog(); }
+    return;
+  }
+  if ($('help-dialog').open || !game) return;
   const dir = KEY_DIR[e.code] ?? ({ a: 'left', A: 'left', d: 'right', D: 'right' })[e.key];
   if (dir) { e.preventDefault(); held.add(dir); updateAxis(); return; }
   if (e.code === 'ArrowUp' || e.code === 'ArrowDown') { e.preventDefault(); return; }
