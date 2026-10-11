@@ -817,7 +817,6 @@ $('theme').addEventListener('click', () => {
   dirtyWorld = true;
 });
 
-});
 // Init CRT
 
 $('motion').addEventListener('click', () => {
